@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
 use chrono::Utc;
 use uuid::Uuid;
-use tracing::Instrument;
+// use tracing::Instrument;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -24,35 +24,22 @@ pub async fn subscribe(
     // Retrieving a connection from the application state!
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    // Using this approach to get around the other way of dynamically creating a DB
-    // and tearing it down on every `cargo test`.
-    // There should not be a where clause on this delete statement.
+    match insert_subscriber(&pool, &form).await {
+	Ok(_) => HttpResponse::Ok().finish(),
+	Err(_) => HttpResponse::InternalServerError().finish()
+    }    
+}
 
-    match sqlx::query!(	r#" delete from subscriptions "#)
-	.execute(pool.get_ref())
-	.await {
-	    Ok(_) => {
-		println!("Cleared the subscriptions table");
-		HttpResponse::Ok().finish()
-	    },
-	    Err(e) => {
-		println!("Failed to clear the subscriptions table: {}", e);
-		HttpResponse::InternalServerError().finish()
-	    }
-	};
-// }
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
 
-// #[tracing::instrument(
-//     name = "Saving new subscriber details in the database",
-//     skip(form, pool)
-// )]
-
-// pub async fn insert_subscriber(
-//     pool: &PgPool,
-//     form: &FormData,
-    // ) -> Result<(), sqlx::Error> {
-    
-    match sqlx::query!(
+pub async fn insert_subscriber(
+    pool: &PgPool,
+    form: &FormData,
+    ) -> Result<(), sqlx::Error> {
+    sqlx::query!(
 	r#"
 insert into subscriptions (id, email, name, subscribed_at) 
 values ($1, $2, $3, $4)
@@ -62,23 +49,14 @@ values ($1, $2, $3, $4)
 	form.name,
 	Utc::now()
     )
-	.execute(pool.get_ref())
+	.execute(pool)
 	.await
-	// .map_err(|e| {
-	//     tracing::error!("Failed to execute query: {:?}", e);
-	//     e
-	// })?;
-    // Ok(())
-          {
-	      Ok(_) => {
-		  println!("Added a new subscriber");
-		  HttpResponse::Ok().finish()
-	      },
-	    Err(e) => {
-		println!("Failed to add a new subscriber: {}", e);
-		HttpResponse::InternalServerError().finish()
-	    }
-          }   
+	.map_err(|e| {
+	    tracing::error!("Failed to execute query: {:?}", e);
+	    e
+		// Using the `?` operator below to return early if the function fails
+	})?;
+    Ok(())
 }
 
 

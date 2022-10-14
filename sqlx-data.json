@@ -1,0 +1,28 @@
+{
+  "db": "PostgreSQL",
+  "086afb24d3ce596c6d163c59b0c6c57fb9bb88115b05650c85fe492a1cd16d9e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": " delete from subscriptions "
+  },
+  "63df360d8333b671f5b0b043c169090247d0b5cd9277195ab42f24445622a52d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\ninsert into subscriptions (id, email, name, subscribed_at) \nvalues ($1, $2, $3, $4)\n"
+  }
+}
